@@ -1,0 +1,82 @@
+You are Kiro acting as a staff engineer. Build a robust Next.js 14 (App Router) + TypeScript app called “PumpPilot” on Vercel, backed by Postgres (Neon/Supabase) + Prisma, with Stripe subscriptions and an automated fuel price ingestion pipeline using the UK Government Fuel Finder Public API.
+
+Hard requirements:
+- Do NOT rely on CSV imports for pricing.
+- Do NOT call the Fuel Finder API during user searches.
+- Instead, implement a scheduled ingestion job via Vercel Cron that syncs prices into Postgres and serves user queries from the DB.
+
+Stack:
+- Next.js 14 App Router + TypeScript + Tailwind
+- Prisma + Postgres
+- Auth: Clerk (preferred) or NextAuth
+- Billing: Stripe subscriptions
+- Validation: Zod
+- Logging: structured logs; Sentry hooks optional
+- Rate limiting for public endpoints (either Vercel KV or simple in-memory for MVP)
+
+Core features:
+1) Auth + subscription gating:
+   - Free tier limited
+   - Paid tier unlocks “cheapest nearby” + savings estimates
+   - Stripe checkout + customer portal
+   - Stripe webhooks verified + idempotent (dedupe by event id)
+2) Vehicles CRUD:
+   - name, fuel_type (petrol/diesel), efficiency (mpg or L/100km), odometer unit
+3) Fill-ups CRUD:
+   - date, postcode, liters, ppl (pence per litre), total cost, odometer, optional station name
+   - server-side validation and sensible empty states
+4) Dashboard analytics:
+   - 30d spend, avg ppl, cost per mile, estimated savings
+   - charts for spend and ppl over time
+5) Cheapest nearby:
+   - input postcode + radius miles (default 5)
+   - use postcode→lat/lng from postcodes.io with DB cache table
+   - query stations within radius, join latest prices, sort by cheapest
+   - show last updated timestamp and distance
+6) Savings estimation:
+   - for each fill-up, estimate savings vs cheapest station within radius at/near that time
+   - implement robust fallback logic (if no price within 7 days, mark “insufficient data”)
+
+Fuel ingestion pipeline:
+- Implement Vercel Cron job hitting /api/cron/fuel-sync
+- Secure with CRON_SECRET header check
+- Fetch from UK Fuel Finder Public API
+- Validate payload with Zod
+- Upsert stations by station_id from source
+- Upsert latest price per station
+- Optionally insert station_prices_history rows with unique (station_id, updated_at) to prevent duplicates
+- Track ingestion stats (inserted/updated/skipped/errors/duration)
+- Implement retries with exponential backoff and timeouts
+- Handle pagination/cursors if API provides; if not, ingest in chunks and store progress (DB or KV)
+
+Database schema (Prisma) must include:
+- User mapping (if needed)
+- Subscription
+- Vehicle
+- FillUp
+- Station
+- StationPriceLatest
+- StationPriceHistory (optional)
+- PostcodeGeoCache
+
+Performance:
+- Prefer PostGIS for radius queries. If not available, implement Haversine distance in SQL and index lat/lng.
+- Ensure cheapest nearby endpoint returns quickly.
+
+Deliverables:
+- Full repo with README:
+  - env vars list (DB_URL, STRIPE keys, CRON_SECRET, etc)
+  - Vercel cron setup instructions (vercel.json)
+  - local dev steps
+  - how to run tests
+- Tests:
+  - unit tests for savings and cost-per-mile calculations
+  - integration test for fuel-sync handler (mock API response)
+  - integration test for cheapest-nearby query
+- Provide a “Production checklist” section.
+
+Acceptance criteria:
+- New user can sign up, subscribe, add vehicle, log 3 fill-ups, view dashboard metrics.
+- Cron sync populates stations/prices and is idempotent.
+- Cheapest nearby works from DB data and shows last updated timestamps.
+- Stripe webhooks update subscription reliably.

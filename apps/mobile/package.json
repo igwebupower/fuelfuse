@@ -1,0 +1,23 @@
+{
+  "name": "@fuelfuse/mobile",
+  "version": "1.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "expo": "~50.0.0",
+    "expo-router": "~3.4.0",
+    "react": "18.2.0",
+    "react-native": "0.73.0",
+    "@fuelfuse/shared": "*"
+  },
+  "devDependencies": {
+    "@types/react": "~18.2.45",
+    "typescript": "^5.3.3"
+  }
+}

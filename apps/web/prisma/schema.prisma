@@ -1,0 +1,167 @@
+// Prisma schema for FuelFuse MVP
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User and Authentication
+model User {
+  id          String   @id @default(cuid())
+  clerkUserId String   @unique
+  email       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subscription Subscription?
+  preferences  UserPreferences?
+  pushTokens   PushToken[]
+  alertRules   AlertRule[]
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String    @unique
+  stripeSubscriptionId String?   @unique
+  status               String // active, canceled, past_due, etc.
+  plan                 String // free, pro_monthly, pro_yearly
+  periodEnd            DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model UserPreferences {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  homePostcode    String?
+  defaultRadius   Int      @default(5)
+  defaultFuelType String   @default("petrol") // petrol, diesel
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Push Notifications
+model PushToken {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expoPushToken String   @unique
+  platform      String // ios, android
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([expoPushToken])
+}
+
+model AlertRule {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  centerPostcode    String?
+  lat               Float?
+  lng               Float?
+  radiusMiles       Int
+  fuelType          String // petrol, diesel
+  triggerType       String    @default("price_drop")
+  thresholdPpl      Int       @default(2)
+  enabled           Boolean   @default(true)
+  lastTriggeredAt   DateTime?
+  lastNotifiedPrice Int?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([userId, enabled])
+}
+
+// Fuel Stations and Prices
+model Station {
+  id              String   @id @default(cuid())
+  stationId       String   @unique // Source station ID from Fuel Finder
+  brand           String
+  name            String
+  address         String
+  postcode        String
+  lat             Float
+  lng             Float
+  amenities       Json?
+  openingHours    Json?
+  updatedAtSource DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  latestPrice  StationPriceLatest?
+  priceHistory StationPriceHistory[]
+
+  @@index([lat, lng])
+  @@index([postcode])
+}
+
+model StationPriceLatest {
+  id              String   @id @default(cuid())
+  stationId       String   @unique
+  station         Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  petrolPpl       Int? // Price in pence per litre
+  dieselPpl       Int?
+  updatedAtSource DateTime
+  fetchedAt       DateTime @default(now())
+
+  @@index([updatedAtSource])
+}
+
+model StationPriceHistory {
+  id              String   @id @default(cuid())
+  stationId       String
+  station         Station  @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  petrolPpl       Int?
+  dieselPpl       Int?
+  updatedAtSource DateTime
+  fetchedAt       DateTime @default(now())
+
+  @@unique([stationId, updatedAtSource])
+  @@index([stationId, updatedAtSource])
+}
+
+// Geocoding Cache
+model PostcodeGeoCache {
+  id                 String   @id @default(cuid())
+  postcodeNormalized String   @unique
+  lat                Float
+  lng                Float
+  createdAt          DateTime @default(now())
+  lastUsedAt         DateTime @default(now())
+
+  @@index([postcodeNormalized])
+}
+
+// Job Tracking
+model IngestionRun {
+  id           String    @id @default(cuid())
+  startedAt    DateTime
+  finishedAt   DateTime?
+  status       String // success, partial, failed
+  counts       Json // { stationsProcessed, pricesUpdated, errors }
+  errorSummary Json?
+
+  @@index([startedAt])
+}
+
+model AlertRun {
+  id           String    @id @default(cuid())
+  startedAt    DateTime
+  finishedAt   DateTime?
+  status       String // success, failed
+  sentCount    Int       @default(0)
+  errorSummary Json?
+
+  @@index([startedAt])
+}

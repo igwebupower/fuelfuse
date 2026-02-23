@@ -1,0 +1,31 @@
+{
+  "name": "@fuelfuse/web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fuelfuse/shared": "*",
+    "@prisma/client": "^5.9.0",
+    "@vercel/kv": "^3.0.0",
+    "next": "^14.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "dotenv": "^17.3.1",
+    "fast-check": "^3.15.0",
+    "prisma": "^5.9.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  }
+}
