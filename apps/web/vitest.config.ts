@@ -11,6 +11,7 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./test/setup.ts'],
     testTimeout: 30000, // 30 seconds for property-based tests with database operations
+    fileParallelism: false, // Run test files sequentially to avoid database conflicts
   },
   resolve: {
     alias: {

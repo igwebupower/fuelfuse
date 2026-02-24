@@ -13,21 +13,42 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.fuelfuse.app"
+      "bundleIdentifier": "com.fuelfuse.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "FuelFuse needs your location to find nearby fuel stations."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.fuelfuse.app"
+      "package": "com.fuelfuse.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#ffffff",
+          "sounds": []
+        }
+      ]
     ],
-    "scheme": "fuelfuse"
+    "scheme": "fuelfuse",
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id-here"
+      }
+    }
   }
 }
+

@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma';
 // Clean up database before each test
 beforeEach(async () => {
   // Clean up in reverse order of dependencies
+  await prisma.webhookEvent.deleteMany();
   await prisma.alertRun.deleteMany();
   await prisma.ingestionRun.deleteMany();
   await prisma.postcodeGeoCache.deleteMany();

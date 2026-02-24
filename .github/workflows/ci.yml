@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgis/postgis:15-3.3
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fuelfuse_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Setup test environment
+        run: |
+          cd apps/web
+          cp .env.example .env
+          # Override DATABASE_URL for test environment
+          sed -i 's|DATABASE_URL=.*|DATABASE_URL="postgresql://postgres:postgres@localhost:5432/fuelfuse_test"|' .env
+          # Add mock values for required environment variables
+          echo "CRON_SECRET=test-cron-secret" >> .env
+          echo "ADMIN_SECRET=test-admin-secret" >> .env
+          echo "CLERK_SECRET_KEY=test-clerk-key" >> .env
+          echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=test-clerk-pub-key" >> .env
+          echo "STRIPE_SECRET_KEY=sk_test_mock" >> .env
+          echo "STRIPE_WEBHOOK_SECRET=whsec_test_mock" >> .env
+          echo "EXPO_ACCESS_TOKEN=test-expo-token" >> .env
+        
+      - name: Run Prisma migrations
+        run: |
+          cd apps/web
+          npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fuelfuse_test
+      
+      - name: TypeScript type check
+        run: |
+          cd apps/web
+          npx tsc --noEmit
+      
+      - name: Run tests
+        run: npm run test
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fuelfuse_test
+          NODE_ENV: test
+      
+      - name: Generate coverage report (optional)
+        if: always()
+        run: |
+          cd apps/web
+          npx vitest run --coverage || true
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fuelfuse_test

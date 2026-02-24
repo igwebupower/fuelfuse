@@ -7,15 +7,22 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.38.1",
     "@fuelfuse/shared": "*",
     "@prisma/client": "^5.9.0",
+    "@sentry/nextjs": "^10.39.0",
     "@vercel/kv": "^3.0.0",
     "next": "^14.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "stripe": "^20.3.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {
@@ -25,6 +32,7 @@
     "dotenv": "^17.3.1",
     "fast-check": "^3.15.0",
     "prisma": "^5.9.0",
+    "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^1.2.0"
   }

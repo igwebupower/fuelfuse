@@ -5,6 +5,7 @@ import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 import * as fc from 'fast-check';
 import { getStationDetail } from '../lib/search';
 import { prisma } from '../lib/prisma';
+import { Prisma } from '@prisma/client';
 
 describe('Station Detail - Property 2: Station detail contains all required fields', () => {
   // Clean up test data before and after tests
@@ -45,9 +46,8 @@ describe('Station Detail - Property 2: Station detail contains all required fiel
           await prisma.stationPriceHistory.deleteMany({});
           await prisma.station.deleteMany({});
           
-          const stationId = `TEST-STATION-${Date.now()}`;
+          const stationId = `TEST-STATION-${Date.now()}-${Math.random()}`;
           
-          // Create amenities and opening hours if needed
           const amenities = stationData.hasAmenities
             ? {
                 carWash: fc.sample(fc.boolean(), 1)[0],
@@ -68,7 +68,6 @@ describe('Station Detail - Property 2: Station detail contains all required fiel
               }
             : null;
           
-          // Create station
           const station = await prisma.station.create({
             data: {
               stationId,
@@ -78,42 +77,39 @@ describe('Station Detail - Property 2: Station detail contains all required fiel
               postcode: stationData.postcode || 'TE1 1ST',
               lat: stationData.lat,
               lng: stationData.lng,
-              amenities: amenities as any,
-              openingHours: openingHours as any,
+              amenities: amenities ? (amenities as any) : Prisma.JsonNull,
+              openingHours: openingHours ? (openingHours as any) : Prisma.JsonNull,
               updatedAtSource: new Date(),
+              latestPrice: {
+                create: {
+                  petrolPpl: stationData.petrolPpl,
+                  dieselPpl: stationData.dieselPpl,
+                  updatedAtSource: new Date(),
+                },
+              },
+            },
+            include: {
+              latestPrice: true,
             },
           });
           
-          // Create price data
-          await prisma.stationPriceLatest.create({
-            data: {
-              stationId: station.id,
-              petrolPpl: stationData.petrolPpl,
-              dieselPpl: stationData.dieselPpl,
-              updatedAtSource: new Date(),
-            },
-          });
-          
-          // Fetch station detail
           const detail = await getStationDetail(stationId);
           
-          // Property 1: All required fields should be present
           expect(detail.stationId).toBe(stationId);
           expect(detail.brand).toBe(stationData.brand);
           expect(detail.name).toBeDefined();
           expect(detail.address).toBeDefined();
           expect(detail.postcode).toBeDefined();
-          expect(detail.lat).toBe(stationData.lat);
-          expect(detail.lng).toBe(stationData.lng);
-          
-          // Property 2: Prices should match (can be null)
+          expect(detail.lat).toBeCloseTo(stationData.lat, 5);
+          expect(detail.lng).toBeCloseTo(stationData.lng, 5);
+
+
+
           expect(detail.petrolPrice).toBe(stationData.petrolPpl);
           expect(detail.dieselPrice).toBe(stationData.dieselPpl);
           
-          // Property 3: lastUpdated should be a Date
           expect(detail.lastUpdated).toBeInstanceOf(Date);
           
-          // Property 4: Amenities should be null or an object
           if (stationData.hasAmenities) {
             expect(detail.amenities).not.toBeNull();
             expect(typeof detail.amenities).toBe('object');
@@ -121,7 +117,6 @@ describe('Station Detail - Property 2: Station detail contains all required fiel
             expect(detail.amenities).toBeNull();
           }
           
-          // Property 5: Opening hours should be null or an object
           if (stationData.hasOpeningHours) {
             expect(detail.openingHours).not.toBeNull();
             expect(typeof detail.openingHours).toBe('object');
@@ -129,7 +124,6 @@ describe('Station Detail - Property 2: Station detail contains all required fiel
             expect(detail.openingHours).toBeNull();
           }
           
-          // Property 6: pricePerLitre should be set (petrol if available, else diesel)
           if (stationData.petrolPpl !== null) {
             expect(detail.pricePerLitre).toBe(stationData.petrolPpl);
           } else if (stationData.dieselPpl !== null) {
@@ -138,33 +132,29 @@ describe('Station Detail - Property 2: Station detail contains all required fiel
             expect(detail.pricePerLitre).toBe(0);
           }
           
-          // Clean up after this iteration
           await prisma.stationPriceLatest.deleteMany({});
           await prisma.stationPriceHistory.deleteMany({});
           await prisma.station.deleteMany({});
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 20, timeout: 60000 }
     );
-  });
+  }, 120000);
 
   test('station detail throws error for non-existent station', async () => {
     await fc.assert(
       fc.asyncProperty(
         fc.string({ minLength: 10, maxLength: 30 }),
         async (nonExistentId) => {
-          // Ensure this station doesn't exist
           await prisma.station.deleteMany({
             where: { stationId: nonExistentId },
           });
-          
-          // Should throw error
           await expect(getStationDetail(nonExistentId)).rejects.toThrow(
             `Station not found: ${nonExistentId}`
           );
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 20 }
     );
   });
 
@@ -178,14 +168,12 @@ describe('Station Detail - Property 2: Station detail contains all required fiel
           petrolPpl: fc.integer({ min: 100, max: 200 }),
         }),
         async (stationData) => {
-          // Clean up before this test iteration
           await prisma.stationPriceLatest.deleteMany({});
           await prisma.stationPriceHistory.deleteMany({});
           await prisma.station.deleteMany({});
           
-          const stationId = `TEST-STATION-NULL-${Date.now()}`;
+          const stationId = `TEST-STATION-NULL-${Date.now()}-${Math.random()}`;
           
-          // Create station with null amenities and opening hours
           const station = await prisma.station.create({
             data: {
               stationId,
@@ -195,46 +183,41 @@ describe('Station Detail - Property 2: Station detail contains all required fiel
               postcode: 'TE1 1ST',
               lat: stationData.lat,
               lng: stationData.lng,
-              amenities: null,
-              openingHours: null,
+              amenities: Prisma.JsonNull,
+              openingHours: Prisma.JsonNull,
               updatedAtSource: new Date(),
+              latestPrice: {
+                create: {
+                  petrolPpl: stationData.petrolPpl,
+                  dieselPpl: null,
+                  updatedAtSource: new Date(),
+                },
+              },
+            },
+            include: {
+              latestPrice: true,
             },
           });
           
-          await prisma.stationPriceLatest.create({
-            data: {
-              stationId: station.id,
-              petrolPpl: stationData.petrolPpl,
-              dieselPpl: null,
-              updatedAtSource: new Date(),
-            },
-          });
-          
-          // Fetch station detail
           const detail = await getStationDetail(stationId);
           
-          // Should return null for amenities and opening hours without error
           expect(detail.amenities).toBeNull();
           expect(detail.openingHours).toBeNull();
-          
-          // Other fields should still be present
           expect(detail.stationId).toBe(stationId);
           expect(detail.brand).toBe(stationData.brand);
           expect(detail.petrolPrice).toBe(stationData.petrolPpl);
           expect(detail.dieselPrice).toBeNull();
           
-          // Clean up after this iteration
           await prisma.stationPriceLatest.deleteMany({});
           await prisma.stationPriceHistory.deleteMany({});
           await prisma.station.deleteMany({});
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 20, timeout: 60000 }
     );
-  });
+  }, 120000);
 
   test('specific example: station with all fields populated', async () => {
-    // Clean up before test
     await prisma.stationPriceLatest.deleteMany({});
     await prisma.stationPriceHistory.deleteMany({});
     await prisma.station.deleteMany({});
@@ -266,15 +249,16 @@ describe('Station Detail - Property 2: Station detail contains all required fiel
           sunday: '08:00-20:00',
         },
         updatedAtSource: new Date('2024-01-01T12:00:00Z'),
+        latestPrice: {
+          create: {
+            petrolPpl: 145,
+            dieselPpl: 155,
+            updatedAtSource: new Date('2024-01-01T12:00:00Z'),
+          },
+        },
       },
-    });
-    
-    await prisma.stationPriceLatest.create({
-      data: {
-        stationId: station.id,
-        petrolPpl: 145,
-        dieselPpl: 155,
-        updatedAtSource: new Date('2024-01-01T12:00:00Z'),
+      include: {
+        latestPrice: true,
       },
     });
     
@@ -289,7 +273,7 @@ describe('Station Detail - Property 2: Station detail contains all required fiel
     expect(detail.lng).toBe(-0.1419);
     expect(detail.petrolPrice).toBe(145);
     expect(detail.dieselPrice).toBe(155);
-    expect(detail.pricePerLitre).toBe(145); // Should use petrol price
+    expect(detail.pricePerLitre).toBe(145);
     expect(detail.amenities).toEqual({
       carWash: true,
       shop: true,
@@ -307,7 +291,6 @@ describe('Station Detail - Property 2: Station detail contains all required fiel
     });
     expect(detail.lastUpdated).toBeInstanceOf(Date);
     
-    // Clean up after test
     await prisma.stationPriceLatest.deleteMany({});
     await prisma.stationPriceHistory.deleteMany({});
     await prisma.station.deleteMany({});

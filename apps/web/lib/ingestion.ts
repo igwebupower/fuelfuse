@@ -1,9 +1,13 @@
 // Fuel price ingestion service
+// Requirements: 6.1-6.11, 8.7
 import { prisma } from './prisma';
 import { getOAuthToken } from './oauth';
 import { fuelFinderStationSchema } from '@fuelfuse/shared/schemas';
 import type { FuelFinderStation, IngestionResult } from '@fuelfuse/shared/types';
 import { z } from 'zod';
+import { fetchJSON, TIMEOUTS } from './external-api';
+import { logger } from './logger';
+import { ExternalServiceError, DatabaseError } from './errors';
 
 const FUEL_FINDER_API_URL = process.env.FUEL_FINDER_API_URL || 'https://api.fuelprices.gov.uk';
 const FUEL_FINDER_STATIONS_ENDPOINT = `${FUEL_FINDER_API_URL}/v1/stations`;
@@ -26,78 +30,54 @@ interface FuelFinderApiResponse {
 }
 
 /**
- * Sleep for specified milliseconds
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-/**
- * Check if error is retryable (429 or 5xx)
- */
-function isRetryableError(status: number): boolean {
-  return status === 429 || (status >= 500 && status < 600);
-}
-
-/**
  * Fetch stations from Fuel Finder API with retry logic
  */
 async function fetchStationsFromAPI(token: string, cursor?: string): Promise<FuelFinderApiResponse> {
+  const log = logger.child({ service: 'FuelFinderAPI', operation: 'fetchStations' });
+  
   const url = new URL(FUEL_FINDER_STATIONS_ENDPOINT);
   if (cursor) {
     url.searchParams.set('cursor', cursor);
   }
 
-  const maxRetries = 3;
-  let lastError: Error | null = null;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await fetch(url.toString(), {
+  try {
+    log.debug('Fetching stations from API', { cursor });
+    
+    const data = await fetchJSON<FuelFinderApiResponse>(
+      url.toString(),
+      {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
         },
-        signal: AbortSignal.timeout(10000), // 10s timeout
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        
-        // Check if error is retryable
-        if (isRetryableError(response.status) && attempt < maxRetries) {
-          // Calculate exponential backoff: 1s, 2s, 4s
-          const delayMs = Math.pow(2, attempt) * 1000;
-          console.warn(
-            `Fuel Finder API request failed with ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`
-          );
-          await sleep(delayMs);
-          continue;
-        }
-        
-        throw new Error(
-          `Fuel Finder API request failed: ${response.status} ${response.statusText} - ${errorText}`
-        );
+      },
+      {
+        timeout: TIMEOUTS.FUEL_FINDER_API,
+        retries: 3,
+        retryDelay: 1000,
+        service: 'FuelFinderAPI',
       }
-
-      const jsonData = await response.json();
-      
-      // Validate response with Zod
-      const validatedData = fuelFinderApiResponseSchema.parse(jsonData);
-      
-      return validatedData;
-    } catch (error) {
-      lastError = error as Error;
-      
-      // If it's a validation error, don't retry
-      if (error instanceof z.ZodError) {
-        throw new Error(`Invalid API response format: ${error.message}`);
-      }
-      
-      // If it's a network error and we have retries left, retry with backoff
-      if (attempt < maxRetries && !(error instanceof Error && error.message.includes('Fuel Finder API request failed'))) {
-        const delayMs = Math.pow(2, attempt) * 1000;
+    );
+    
+    // Validate response with Zod
+    const validatedData = fuelFinderApiResponseSchema.parse(data);
+    
+    log.info('Successfully fetched stations', { 
+      count: validatedData.data.length,
+      hasMore: validatedData.pagination?.hasMore 
+    });
+    
+    return validatedData;
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      log.error('Invalid API response format', error);
+      throw new ExternalServiceError('FuelFinderAPI', 'Invalid response format');
+    }
+    log.error('Failed to fetch stations', error);
+    throw error;
+  }
+}
         console.warn(
           `Fuel Finder API request error: ${error}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`
         );
@@ -212,8 +192,10 @@ async function upsertStation(station: FuelFinderStation): Promise<void> {
 
 /**
  * Upsert multiple stations with their prices
+ * Exported for use by CSV ingestion endpoint
  */
-async function upsertStations(stations: FuelFinderStation[]): Promise<{ processed: number; errors: string[] }> {
+export async function upsertStationsAndPrices(stations: FuelFinderStation[]): Promise<{ processed: number; errors: string[] }> {
+  const log = logger.child({ operation: 'upsertStations' });
   let processed = 0;
   const errors: string[] = [];
 
@@ -224,7 +206,12 @@ async function upsertStations(stations: FuelFinderStation[]): Promise<{ processe
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       errors.push(`Failed to upsert station ${station.stationId}: ${errorMsg}`);
-      console.error(`Error upserting station ${station.stationId}:`, error);
+      log.error(`Error upserting station ${station.stationId}`, error);
+      
+      // Wrap database errors
+      if (error instanceof Error && error.message.includes('Prisma')) {
+        throw new DatabaseError(`Failed to upsert station ${station.stationId}`, error);
+      }
     }
   }
 
@@ -235,19 +222,27 @@ async function upsertStations(stations: FuelFinderStation[]): Promise<{ processe
  * Record ingestion run metadata in the database
  */
 async function recordIngestionRun(result: IngestionResult): Promise<void> {
-  await prisma.ingestionRun.create({
-    data: {
-      startedAt: result.startedAt,
-      finishedAt: result.finishedAt,
-      status: result.status,
-      counts: {
-        stationsProcessed: result.stationsProcessed,
-        pricesUpdated: result.pricesUpdated,
-        errorsCount: result.errors.length,
+  const log = logger.child({ operation: 'recordIngestionRun' });
+  
+  try {
+    await prisma.ingestionRun.create({
+      data: {
+        startedAt: result.startedAt,
+        finishedAt: result.finishedAt,
+        status: result.status,
+        counts: {
+          stationsProcessed: result.stationsProcessed,
+          pricesUpdated: result.pricesUpdated,
+          errorsCount: result.errors.length,
+        },
+        errorSummary: result.errors.length > 0 ? { errors: result.errors } : null,
       },
-      errorSummary: result.errors.length > 0 ? { errors: result.errors } : null,
-    },
-  });
+    });
+    log.info('Ingestion run recorded', { status: result.status, stationsProcessed: result.stationsProcessed });
+  } catch (error) {
+    log.error('Failed to record ingestion run', error);
+    throw new DatabaseError('Failed to record ingestion run', error as Error);
+  }
 }
 
 /**
@@ -255,6 +250,7 @@ async function recordIngestionRun(result: IngestionResult): Promise<void> {
  * Fetches stations from Fuel Finder API and upserts them into the database
  */
 export async function runFuelSync(): Promise<IngestionResult> {
+  const log = logger.child({ operation: 'runFuelSync' });
   const startedAt = new Date();
   let status: 'success' | 'partial' | 'failed' = 'success';
   let stationsProcessed = 0;
@@ -262,6 +258,8 @@ export async function runFuelSync(): Promise<IngestionResult> {
   const errors: string[] = [];
 
   try {
+    log.info('Starting fuel sync');
+    
     // Get OAuth token
     const token = await getOAuthToken();
 
@@ -269,12 +267,14 @@ export async function runFuelSync(): Promise<IngestionResult> {
     const stations = await fetchAllStations(token);
 
     if (stations.length === 0) {
-      console.warn('No stations returned from Fuel Finder API');
+      log.warn('No stations returned from Fuel Finder API');
       status = 'partial';
       errors.push('No stations returned from API');
     } else {
+      log.info(`Fetched ${stations.length} stations from API`);
+      
       // Upsert stations
-      const result = await upsertStations(stations);
+      const result = await upsertStationsAndPrices(stations);
       stationsProcessed = result.processed;
       pricesUpdated = result.processed; // Each station has prices
       
@@ -287,7 +287,7 @@ export async function runFuelSync(): Promise<IngestionResult> {
     const errorMsg = error instanceof Error ? error.message : String(error);
     errors.push(`Ingestion failed: ${errorMsg}`);
     status = 'failed';
-    console.error('Fuel sync error:', error);
+    log.error('Fuel sync error', error);
   }
 
   const finishedAt = new Date();

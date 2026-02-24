@@ -91,7 +91,7 @@ export async function cacheCoordinates(
 
 /**
  * Fetches coordinates from postcodes.io API
- * Requirements: 14.2
+ * Requirements: 14.2, 8.7
  * 
  * @param normalizedPostcode - Normalized postcode string
  * @returns Coordinates from external API
@@ -100,28 +100,34 @@ export async function cacheCoordinates(
 export async function fetchCoordinatesFromAPI(
   normalizedPostcode: string
 ): Promise<Coordinates> {
-  const response = await fetch(
-    `https://api.postcodes.io/postcodes/${encodeURIComponent(normalizedPostcode)}`,
-    { signal: AbortSignal.timeout(10000) } // 10 second timeout
-  );
+  const { fetchJSON, TIMEOUTS } = await import('./external-api');
+  const { ExternalServiceError, ValidationError } = await import('./errors');
 
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error(`Postcode not found: ${normalizedPostcode}`);
+  try {
+    const data = await fetchJSON(
+      `https://api.postcodes.io/postcodes/${encodeURIComponent(normalizedPostcode)}`,
+      {},
+      {
+        timeout: TIMEOUTS.POSTCODES_IO,
+        service: 'postcodes.io',
+        retries: 2,
+      }
+    );
+
+    if (!data.result || !data.result.latitude || !data.result.longitude) {
+      throw new ValidationError(`Invalid response from postcodes.io for: ${normalizedPostcode}`);
     }
-    throw new Error(`Postcodes.io API error: ${response.status}`);
+
+    return {
+      lat: data.result.latitude,
+      lng: data.result.longitude,
+    };
+  } catch (error) {
+    if (error instanceof ExternalServiceError && error.statusCode === 404) {
+      throw new ValidationError(`Postcode not found: ${normalizedPostcode}`);
+    }
+    throw error;
   }
-
-  const data = await response.json();
-
-  if (!data.result || !data.result.latitude || !data.result.longitude) {
-    throw new Error(`Invalid response from postcodes.io for: ${normalizedPostcode}`);
-  }
-
-  return {
-    lat: data.result.latitude,
-    lng: data.result.longitude,
-  };
 }
 
 /**

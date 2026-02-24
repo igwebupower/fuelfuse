@@ -165,3 +165,13 @@ model AlertRun {
 
   @@index([startedAt])
 }
+
+// Webhook Event Tracking for Idempotency
+model WebhookEvent {
+  id              String   @id @default(cuid())
+  stripeEventId   String   @unique
+  eventType       String
+  processedAt     DateTime @default(now())
+  
+  @@index([stripeEventId])
+}

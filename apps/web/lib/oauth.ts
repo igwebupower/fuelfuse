@@ -1,5 +1,8 @@
 // OAuth2 service for Fuel Finder API
+// Requirements: 6.2, 8.7
 import { kv } from '@vercel/kv';
+import { logger } from './logger';
+import { ExternalServiceError } from './errors';
 
 interface OAuth2Token {
   access_token: string;
@@ -41,10 +44,15 @@ function isRetryableError(status: number): boolean {
 /**
  * Request a new OAuth2 token from Fuel Finder API using client credentials flow
  * Implements exponential backoff retry for 429 and 5xx errors
+ * Requirements: 6.2, 6.10, 8.7
  */
 async function requestNewToken(): Promise<CachedToken> {
+  const log = logger.child({ service: 'FuelFinderAPI', operation: 'requestOAuthToken' });
+
   if (!FUEL_FINDER_CLIENT_ID || !FUEL_FINDER_CLIENT_SECRET) {
-    throw new Error('Fuel Finder API credentials not configured');
+    const error = new Error('Fuel Finder API credentials not configured');
+    log.error('Missing OAuth credentials', error);
+    throw error;
   }
 
   const params = new URLSearchParams({
@@ -59,12 +67,15 @@ async function requestNewToken(): Promise<CachedToken> {
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
+      log.debug(`Requesting OAuth token (attempt ${attempt + 1}/${maxRetries + 1})`);
+
       const response = await fetch(FUEL_FINDER_TOKEN_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: params.toString(),
+        signal: AbortSignal.timeout(15000), // 15 second timeout
       });
 
       if (!response.ok) {
@@ -74,15 +85,18 @@ async function requestNewToken(): Promise<CachedToken> {
         if (isRetryableError(response.status) && attempt < maxRetries) {
           // Calculate exponential backoff: 1s, 2s, 4s
           const delayMs = Math.pow(2, attempt) * 1000;
-          console.warn(
-            `OAuth token request failed with ${response.status}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`
+          log.warn(
+            `OAuth token request failed, retrying`,
+            { status: response.status, attempt: attempt + 1, delayMs }
           );
           await sleep(delayMs);
           continue;
         }
         
-        throw new Error(
-          `OAuth token request failed: ${response.status} ${response.statusText} - ${errorText}`
+        throw new ExternalServiceError(
+          'FuelFinderAPI',
+          `OAuth token request failed: ${response.status} ${response.statusText}`,
+          response.status
         );
       }
 
@@ -90,6 +104,8 @@ async function requestNewToken(): Promise<CachedToken> {
 
       // Calculate expiry time with buffer
       const expiresAt = Date.now() + (tokenData.expires_in * 1000) - REFRESH_BUFFER_MS;
+
+      log.info('OAuth token obtained successfully', { expiresIn: tokenData.expires_in });
 
       return {
         accessToken: tokenData.access_token,
@@ -99,20 +115,19 @@ async function requestNewToken(): Promise<CachedToken> {
       lastError = error as Error;
       
       // If it's a network error and we have retries left, retry with backoff
-      if (attempt < maxRetries && !(error instanceof Error && error.message.includes('OAuth token request failed'))) {
+      if (attempt < maxRetries && !(error instanceof ExternalServiceError)) {
         const delayMs = Math.pow(2, attempt) * 1000;
-        console.warn(
-          `OAuth token request error: ${error}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`
-        );
+        log.warn('OAuth token request error, retrying', { error, attempt: attempt + 1, delayMs });
         await sleep(delayMs);
         continue;
       }
       
+      log.error('OAuth token request failed', error);
       throw error;
     }
   }
 
-  throw lastError || new Error('OAuth token request failed after retries');
+  throw lastError || new ExternalServiceError('FuelFinderAPI', 'OAuth token request failed after retries');
 }
 
 /**

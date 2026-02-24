@@ -13,12 +13,14 @@ This is a monorepo containing:
 ## Prerequisites
 
 - Node.js 18+ and npm
-- PostgreSQL database (Neon recommended)
+- PostgreSQL database (Neon recommended for production)
 - Clerk account for authentication
 - Stripe account for payments
 - Expo account for push notifications
+- Vercel account for backend deployment
+- GOV.UK Fuel Finder API credentials
 
-## Setup Instructions
+## Quick Start (Local Development)
 
 ### 1. Install Dependencies
 
@@ -78,18 +80,20 @@ npx prisma generate
 
 ### 5. Configure Environment Variables
 
-Add all required environment variables to `apps/web/.env`:
+Add all required environment variables to `apps/web/.env` and `apps/mobile/.env`.
 
-- Clerk authentication keys
-- Stripe API keys
-- Fuel Finder API credentials
-- Cron secret
-- Vercel KV credentials
-- Expo access token
+See the **Environment Variables** section below for complete documentation.
 
-See `.env.example` for the complete list.
+### 6. Seed Development Data (Optional)
 
-### 6. Run Development Servers
+```bash
+cd apps/web
+npm run seed
+```
+
+This will populate the database with sample station data for testing. See `apps/web/prisma/SEED_README.md` for details.
+
+### 7. Run Development Servers
 
 **Backend API:**
 ```bash
@@ -117,6 +121,40 @@ The database includes the following tables:
 - `IngestionRun` - Data ingestion job tracking
 - `AlertRun` - Alert job execution tracking
 
+See the Prisma schema at `apps/web/prisma/schema.prisma` for complete details.
+
+## Key Features
+
+- **Search**: Find cheapest fuel stations by postcode or coordinates
+- **Alerts**: Receive push notifications when prices drop (Pro tier)
+- **Subscriptions**: Free and Pro tiers with Stripe integration
+- **Data Ingestion**: Automated fuel price updates from GOV.UK Fuel Finder API
+- **Geocoding**: Efficient postcode-to-coordinates conversion with caching
+- **Rate Limiting**: API rate limiting using Vercel KV
+- **Error Tracking**: Sentry integration for error monitoring
+
+## Documentation
+
+- [Deployment Guide](./docs/DEPLOYMENT.md) - Production deployment instructions
+- [Environment Variables](./docs/ENVIRONMENT_VARIABLES.md) - Complete environment variable documentation
+- [Vercel Cron Setup](./docs/VERCEL_CRON.md) - Cron job configuration guide
+- [Production Checklist](./docs/PRODUCTION_CHECKLIST.md) - Pre and post-deployment checklist
+- [Mobile Setup](./apps/mobile/SETUP.md) - Mobile app setup and build instructions
+- [Mobile Auth Setup](./apps/mobile/AUTH_SETUP.md) - Authentication configuration
+- [Mobile Notifications](./apps/mobile/NOTIFICATIONS_SETUP.md) - Push notification setup
+- [Error Handling (Web)](./apps/web/ERROR_HANDLING.md) - Backend error handling strategy
+- [Error Handling (Mobile)](./apps/mobile/ERROR_HANDLING.md) - Mobile error handling strategy
+- [Database Seeding](./apps/web/prisma/SEED_README.md) - Development data seeding
+
+## Contributing
+
+This is a private project. For development:
+
+1. Create a feature branch from `main`
+2. Make your changes
+3. Ensure all tests pass (`npm test`)
+4. Create a pull request
+
 ## Testing
 
 Run all tests:
@@ -131,23 +169,104 @@ Run tests for specific workspace:
 npm test --workspace=apps/web
 ```
 
-## Key Features
+Run tests in watch mode:
 
-- **Search**: Find cheapest fuel stations by postcode or coordinates
-- **Alerts**: Receive push notifications when prices drop (Pro tier)
-- **Subscriptions**: Free and Pro tiers with Stripe integration
-- **Data Ingestion**: Automated fuel price updates from GOV.UK Fuel Finder API
-- **Geocoding**: Efficient postcode-to-coordinates conversion with caching
+```bash
+npm run test:watch --workspace=apps/web
+```
+
+## Environment Variables
+
+### Backend API (`apps/web/.env`)
+
+See [ENVIRONMENT_VARIABLES.md](./docs/ENVIRONMENT_VARIABLES.md) for complete documentation of all environment variables, including:
+- How to obtain API keys and secrets
+- Required vs optional variables
+- Development vs production values
+- Security considerations
+
+### Mobile App (`apps/mobile/.env`)
+
+See [apps/mobile/SETUP.md](./apps/mobile/SETUP.md) for mobile-specific environment configuration.
+
+## Deployment
+
+### Backend API (Vercel)
+
+See [DEPLOYMENT.md](./docs/DEPLOYMENT.md) for complete deployment instructions, including:
+- Vercel deployment setup
+- Database migration strategy
+- Cron job configuration
+- Environment variable configuration
+- Production checklist
+
+### Mobile App (EAS Build)
+
+See [apps/mobile/SETUP.md](./apps/mobile/SETUP.md) for mobile app build and deployment instructions.
 
 ## Architecture
 
-- **Frontend**: React Native with Expo
-- **Backend**: Next.js 14 App Router
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: Clerk
-- **Payments**: Stripe Checkout
-- **Push Notifications**: Expo Push Service
-- **Deployment**: Vercel (backend), EAS (mobile)
+### High-Level Overview
+
+```
+┌─────────────────┐
+│  Mobile Client  │
+│  (React Native) │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐      ┌──────────────────┐
+│   Next.js API   │◄─────┤  Vercel Cron     │
+│  (Vercel)       │      │  - Fuel Sync     │
+└────────┬────────┘      │  - Alert Run     │
+         │               └──────────────────┘
+         ▼
+┌─────────────────┐
+│   PostgreSQL    │
+│   (Neon)        │
+└─────────────────┘
+
+External Services:
+- Clerk (Authentication)
+- Stripe (Payments)
+- Expo Push (Notifications)
+- GOV.UK Fuel Finder API (Data Source)
+- postcodes.io (Geocoding)
+```
+
+### Technology Stack
+
+**Mobile Application:**
+- React Native with Expo (TypeScript)
+- Expo Router for navigation
+- expo-notifications for push notifications
+- expo-web-browser for Stripe checkout
+- Clerk Expo SDK for authentication
+- Axios for API requests
+
+**Backend API:**
+- Next.js 14 App Router (TypeScript)
+- Prisma ORM for database access
+- Zod for validation
+- Vercel deployment
+- Vercel KV for caching
+
+**Database:**
+- PostgreSQL (Neon recommended)
+- PostGIS extension for geospatial queries
+- Prisma migrations
+
+**Jobs:**
+- Vercel Cron for scheduled tasks
+- OAuth2 client for Fuel Finder API
+- Expo Push API for notifications
+
+**External Services:**
+- Clerk for authentication
+- Stripe Checkout for payments
+- Expo Push Service for notifications
+- postcodes.io for geocoding
+- GOV.UK Fuel Finder API for fuel price data
 
 ## License
 

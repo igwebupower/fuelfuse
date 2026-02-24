@@ -120,114 +120,114 @@ This implementation plan breaks down the FuelFuse MVP into discrete coding tasks
     - **Property 2: Station detail contains all required fields**
     - **Validates: Requirements 2.1, 2.2**
 
-- [ ] 7. Create search API endpoints
+- [x] 7. Create search API endpoints
   - Implement GET /api/search/cheapest with postcode and lat/lng variants
   - Implement GET /api/stations/:stationId
   - Add Zod validation for all inputs
   - Add rate limiting with Vercel KV
   - _Requirements: 1.1, 1.2, 2.1, 8.2_
 
-- [ ] 8. Checkpoint - Ensure search functionality works
+- [x] 8. Cmheckpoint - Ensure search functionality works
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. Implement user account services
-  - [ ] 9.1 Create user creation service
+- [x] 9. Implement user account services
+  - [x] 9.1 Create user creation service
     - Store Clerk user ID and email
     - _Requirements: 3.1_
   
-  - [ ] 9.2 Write property test for user creation
+  - [x] 9.2 Write property test for user creation
     - **Property 5: User creation stores Clerk ID and email**
     - **Validates: Requirements 3.1**
   
-  - [ ] 9.3 Create user preferences service
+  - [x] 9.3 Create user preferences service
     - Implement save and retrieve preferences
     - _Requirements: 3.2, 3.3_
   
-  - [ ] 9.4 Write property test for preferences round-trip
+  - [x] 9.4 Write property test for preferences round-trip
     - **Property 6: User preferences round-trip**
     - **Validates: Requirements 3.2, 3.3**
 
-- [ ] 10. Create user account API endpoints
+- [x] 10. Create user account API endpoints
   - Implement GET/PUT /api/preferences
   - Add Clerk authentication middleware
   - _Requirements: 3.2, 3.3_
 
-- [ ] 11. Implement subscription service
-  - [ ] 11.1 Create Stripe checkout session service
+- [x] 11. Implement subscription service
+  - [x] 11.1 Create Stripe checkout session service
     - Generate checkout session for Pro upgrade
     - Return session ID and URL
     - _Requirements: 5.1_
   
-  - [ ] 11.2 Write property test for checkout session creation
+  - [x] 11.2 Write property test for checkout session creation
     - **Property 14: Checkout session creation returns valid URL**
     - **Validates: Requirements 5.1**
   
-  - [ ] 11.3 Create subscription status service
+  - [x] 11.3 Create subscription status service
     - Check if user is Pro tier
     - Enforce tier limits (radius, alerts)
     - _Requirements: 5.4, 5.5, 5.6, 5.7_
   
-  - [ ] 11.4 Write property test for subscription tier authorization
+  - [x] 11.4 Write property test for subscription tier authorization
     - **Property 17: Subscription tier authorization**
     - **Validates: Requirements 5.4, 5.5, 5.6, 5.7**
 
-- [ ] 12. Implement Stripe webhook handler
-  - [ ] 12.1 Create webhook endpoint POST /api/stripe/webhook
+- [x] 12. Implement Stripe webhook handler
+  - [x] 12.1 Create webhook endpoint POST /api/stripe/webhook
     - Verify webhook signature
     - Handle subscription events (checkout.session.completed, customer.subscription.updated, etc.)
     - Update subscription status in database
     - Implement idempotency with event ID deduplication
     - _Requirements: 5.2, 5.3, 8.3, 8.4_
   
-  - [ ] 12.2 Write property test for webhook idempotency
+  - [x] 12.2 Write property test for webhook idempotency
     - **Property 16: Webhook processing is idempotent**
     - **Validates: Requirements 5.3, 8.4**
   
-  - [ ] 12.3 Write property test for webhook signature verification
+  - [x] 12.3 Write property test for webhook signature verification
     - **Property 26: Webhook signature verification**
     - **Validates: Requirements 8.3**
   
-  - [ ] 12.4 Write property test for subscription update
+  - [x] 12.4 Write property test for subscription update
     - **Property 15: Webhook updates subscription status**
     - **Validates: Requirements 5.2**
 
-- [ ] 13. Create billing API endpoints
+- [x] 13. Create billing API endpoints
   - Implement POST /api/billing/create-checkout-session
   - Implement GET /api/billing/status
   - Add authentication and tier checking
   - _Requirements: 5.1, 5.4_
 
-- [ ] 14. Checkpoint - Ensure subscription flow works
+- [x] 14. Checkpoint - Ensure subscription flow works
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 15. Implement push token service
-  - [ ] 15.1 Create push token registration service
+- [x] 15. Implement push token service
+  - [x] 15.1 Create push token registration service
     - Store Expo push token with user ID and platform
     - Handle token updates
     - _Requirements: 4.1_
   
-  - [ ] 15.2 Write property test for push token registration
+  - [x] 15.2 Write property test for push token registration
     - **Property 8: Push token registration stores token and platform**
     - **Validates: Requirements 4.1**
 
-- [ ] 16. Implement alert rule service
-  - [ ] 16.1 Create alert rule CRUD operations
+- [x] 16. Implement alert rule service
+  - [x] 16.1 Create alert rule CRUD operations
     - Create, read, update, delete alert rules
     - Store all required parameters
     - _Requirements: 4.2_
   
-  - [ ] 16.2 Write property test for alert rule creation
+  - [x] 16.2 Write property test for alert rule creation
     - **Property 9: Alert rule creation stores all parameters**
     - **Validates: Requirements 4.2**
 
-- [ ] 17. Create push and alert API endpoints
+- [x] 17. Create push and alert API endpoints
   - Implement POST /api/push/register
   - Implement POST/GET/PUT/DELETE /api/alerts
   - Add authentication and Pro tier checking
   - _Requirements: 4.1, 4.2_
 
-- [ ] 18. Implement alert evaluation service
-  - [ ] 18.1 Create alert evaluation logic
+- [x] 18. Implement alert evaluation service
+  - [x] 18.1 Create alert evaluation logic
     - Find cheapest station within alert rule radius
     - Compare to last notified price
     - Check threshold and 24-hour cooldown
@@ -235,162 +235,162 @@ This implementation plan breaks down the FuelFuse MVP into discrete coding tasks
     - Skip disabled rules
     - _Requirements: 4.3, 4.5, 4.6, 4.7_
   
-  - [ ] 18.2 Write property test for alert evaluation
+  - [x] 18.2 Write property test for alert evaluation
     - **Property 10: Alert evaluation identifies price drops meeting threshold**
     - **Validates: Requirements 4.3**
   
-  - [ ] 18.3 Write property test for alert rate limiting
+  - [x] 18.3 Write property test for alert rate limiting
     - **Property 12: Alert rate limiting prevents spam**
     - **Validates: Requirements 4.5, 4.6**
   
-  - [ ] 18.4 Write property test for disabled alerts
+  - [x] 18.4 Write property test for disabled alerts
     - **Property 13: Disabled alerts are not evaluated**
     - **Validates: Requirements 4.7**
   
-  - [ ] 18.5 Create push notification service
+  - [x] 18.5 Create push notification service
     - Send notifications via Expo Push API
     - Include station name, new price, price drop
     - Handle errors and log failures
     - _Requirements: 4.4_
   
-  - [ ] 18.6 Write property test for notification content
+  - [x] 18.6 Write property test for notification content
     - **Property 11: Alert notifications contain required information**
     - **Validates: Requirements 4.4**
 
-- [ ] 19. Create alert cron endpoint
+- [x] 19. Create alert cron endpoint
   - Implement POST /api/cron/alert-run route handler
   - Add x-cron-secret authentication
   - Call alert evaluation service for all enabled rules
   - Record alert_runs metadata
   - _Requirements: 4.3, 4.8_
 
-- [ ] 20. Checkpoint - Ensure alert system works
+- [x] 20. Checkpoint - Ensure alert system works
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 21. Initialize mobile app with Expo
+- [x] 21. Initialize mobile app with Expo
   - Create Expo app with TypeScript
   - Set up Expo Router for navigation
   - Configure EAS build
   - Install dependencies (Clerk, expo-notifications, expo-web-browser, axios)
   - _Requirements: 9.9, 9.10_
 
-- [ ] 22. Implement mobile authentication
-  - [ ] 22.1 Set up Clerk authentication
+- [x] 22. Implement mobile authentication
+  - [x] 22.1 Set up Clerk authentication
     - Configure Clerk provider
     - Create login/signup screens
     - Implement protected route wrapper
     - _Requirements: 9.1_
 
-- [ ] 23. Implement mobile search flow
-  - [ ] 23.1 Create search screen
+- [x] 23. Implement mobile search flow
+  - [x] 23.1 Create search screen
     - Postcode input field
     - Location button with permission request
     - Radius selector
     - Fuel type picker
     - _Requirements: 9.2, 9.3_
   
-  - [ ] 23.2 Create results list screen
+  - [x] 23.2 Create results list screen
     - Display stations with price, distance, last updated
     - Show loading states
     - Handle empty results
     - _Requirements: 9.5_
   
-  - [ ] 23.3 Create station detail screen
+  - [x] 23.3 Create station detail screen
     - Display full station information
     - Show amenities and opening hours
     - _Requirements: 9.6_
   
-  - [ ] 23.4 Wire search flow with API
+  - [x] 23.4 Wire search flow with API
     - Call /api/search/cheapest endpoint
     - Handle errors and loading states
     - _Requirements: 1.1, 1.2_
 
-- [ ] 24. Implement mobile account features
-  - [ ] 24.1 Create preferences screen
+- [x] 24. Implement mobile account features
+  - [x] 24.1 Create preferences screen
     - Save home postcode, default radius, default fuel type
     - Call /api/preferences endpoint
     - _Requirements: 3.2, 3.3_
   
-  - [ ] 24.2 Create subscription status display
+  - [x] 24.2 Create subscription status display
     - Show current tier (Free/Pro)
     - Display upgrade button for Free users
     - _Requirements: 5.4_
   
-  - [ ] 24.3 Implement Stripe checkout flow
+  - [x] 24.3 Implement Stripe checkout flow
     - Open checkout URL in expo-web-browser
     - Handle return from checkout
     - _Requirements: 9.7_
 
-- [ ] 25. Implement mobile push notifications
-  - [ ] 25.1 Set up expo-notifications
+- [x] 25. Implement mobile push notifications
+  - [x] 25.1 Set up expo-notifications
     - Request notification permissions
     - Retrieve Expo push token
     - Register token with backend
     - _Requirements: 10.1, 10.2_
   
-  - [ ] 25.2 Handle incoming notifications
+  - [x] 25.2 Handle incoming notifications
     - Display notifications
     - Handle notification taps
     - Navigate to station detail
     - _Requirements: 10.3, 10.4_
 
-- [ ] 26. Implement mobile alerts management (Pro only)
+- [x] 26. Implement mobile alerts management (Pro only)
   - Create alert rules list screen
   - Create alert rule form
   - Call /api/alerts endpoints
   - Show Pro upgrade prompt for Free users
   - _Requirements: 4.2, 5.6_
 
-- [ ] 27. Checkpoint - Ensure mobile app works end-to-end
+- [x] 27. Checkpoint - Ensure mobile app works end-to-end
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 28. Implement CSV fallback ingestion
-  - [ ] 28.1 Create CSV parser and validator
+- [x] 28. Implement CSV fallback ingestion
+  - [x] 28.1 Create CSV parser and validator
     - Parse CSV with station and price data
     - Validate with Zod schemas
     - _Requirements: 7.1_
   
-  - [ ] 28.2 Create CSV ingestion endpoint
+  - [x] 28.2 Create CSV ingestion endpoint
     - Implement POST /api/admin/ingest-csv
     - Use same upsert logic as API ingestion
     - Add admin-only authentication
     - _Requirements: 7.2, 7.3_
   
-  - [ ] 28.3 Write property test for CSV/API equivalence
+  - [x] 28.3 Write property test for CSV/API equivalence
     - **Property 24: CSV and API ingestion produce equivalent results**
     - **Validates: Requirements 7.2**
   
-  - [ ] 28.4 Write property test for admin authorization
+  - [x] 28.4 Write property test for admin authorization
     - **Property 25: CSV fallback requires admin authorization**
     - **Validates: Requirements 7.3**
 
-- [ ] 29. Add error handling and logging
+- [x] 29. Add error handling and logging
   - Implement structured error logging
   - Add Sentry integration
   - Configure timeouts for external APIs
   - Add error boundaries in mobile app
   - _Requirements: 8.7, 13.7_
 
-- [ ] 30. Create development seed script
+- [x] 30. Create development seed script
   - Generate minimal test station data
   - Seed database for local development
   - _Requirements: 13.5_
 
-- [ ] 31. Write deployment documentation
+- [x] 31. Write deployment documentation
   - Create README with setup instructions
   - Document all environment variables
   - Create Vercel cron configuration guide
   - Create production checklist
   - _Requirements: 13.4, 13.6_
 
-- [ ] 32. Configure CI/CD pipeline
+- [x] 32. Configure CI/CD pipeline
   - Set up GitHub Actions or similar
   - Run all tests on PR
   - Require 100% test pass rate
   - Generate coverage reports
   - _Requirements: 12.8_
 
-- [ ] 33. Final checkpoint - Full system integration test
+- [x] 33. Final checkpoint - Full system integration test
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
