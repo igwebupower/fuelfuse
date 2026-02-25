@@ -15,7 +15,6 @@
   "dependencies": {
     "@clerk/clerk-expo": "^1.0.0",
     "@fuelfuse/shared": "*",
-    "@sentry/react-native": "^8.1.0",
     "axios": "^1.6.0",
     "expo": "~50.0.0",
     "expo-constants": "~15.4.0",
