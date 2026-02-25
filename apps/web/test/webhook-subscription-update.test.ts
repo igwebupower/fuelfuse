@@ -24,7 +24,7 @@ vi.mock('stripe', () => {
 });
 
 // Import after mocking
-const stripe = new Stripe('test_key', { apiVersion: '2024-11-20.acacia' });
+const stripe = new Stripe('test_key', { apiVersion: '2026-01-28.clover' });
 
 describe('Webhook Subscription Update - Property 15: Webhook updates subscription status', () => {
   beforeEach(() => {
