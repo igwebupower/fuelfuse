@@ -39,8 +39,7 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Prisma
-apps/web/prisma/migrations/
-
 # TypeScript
 *.tsbuildinfo
+.vercel
+.env*.local

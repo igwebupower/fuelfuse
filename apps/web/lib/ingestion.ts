@@ -78,19 +78,6 @@ async function fetchStationsFromAPI(token: string, cursor?: string): Promise<Fue
     throw error;
   }
 }
-        console.warn(
-          `Fuel Finder API request error: ${error}, retrying in ${delayMs}ms (attempt ${attempt + 1}/${maxRetries})`
-        );
-        await sleep(delayMs);
-        continue;
-      }
-      
-      throw error;
-    }
-  }
-
-  throw lastError || new Error('Fuel Finder API request failed after retries');
-}
 
 /**
  * Fetch all stations from Fuel Finder API, handling pagination
