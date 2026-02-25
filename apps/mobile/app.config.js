@@ -50,7 +50,7 @@ export default {
       clerkPublishableKey: process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY,
       sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
       eas: {
-        projectId: process.env.EAS_PROJECT_ID || 'your-project-id-here',
+        projectId: process.env.EAS_PROJECT_ID || '72e27e5f-413e-4033-a5d3-09bd7ba64b96',
       },
     },
   },
