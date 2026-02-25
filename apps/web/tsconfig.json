@@ -28,6 +28,12 @@
       ],
       "@fuelfuse/shared": [
         "../../packages/shared/src"
+      ],
+      "@fuelfuse/shared/schemas": [
+        "../../packages/shared/src/schemas.ts"
+      ],
+      "@fuelfuse/shared/types": [
+        "../../packages/shared/src/types.ts"
       ]
     },
     "isolatedModules": true
