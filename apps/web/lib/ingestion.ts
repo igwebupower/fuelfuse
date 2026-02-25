@@ -1,6 +1,7 @@
 // Fuel price ingestion service
 // Requirements: 6.1-6.11, 8.7
 import { prisma } from './prisma';
+import { Prisma } from '@prisma/client';
 import { getOAuthToken } from './oauth';
 import { fuelFinderStationSchema } from '@fuelfuse/shared/schemas';
 import type { FuelFinderStation, IngestionResult } from '@fuelfuse/shared/types';
@@ -222,7 +223,7 @@ async function recordIngestionRun(result: IngestionResult): Promise<void> {
           pricesUpdated: result.pricesUpdated,
           errorsCount: result.errors.length,
         },
-        errorSummary: result.errors.length > 0 ? { errors: result.errors } : null,
+        errorSummary: result.errors.length > 0 ? { errors: result.errors } : Prisma.JsonNull,
       },
     });
     log.info('Ingestion run recorded', { status: result.status, stationsProcessed: result.stationsProcessed });

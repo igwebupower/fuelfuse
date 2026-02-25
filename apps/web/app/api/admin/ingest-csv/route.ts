@@ -1,5 +1,6 @@
 // POST /api/admin/ingest-csv - CSV fallback ingestion endpoint
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { parseAndValidateCSV } from '@/lib/csv-parser';
 import { upsertStationsAndPrices } from '@/lib/ingestion';
 import { prisma } from '@/lib/prisma';
@@ -34,7 +35,7 @@ async function recordIngestionRun(result: IngestionResult): Promise<void> {
         pricesUpdated: result.pricesUpdated,
         errorsCount: result.errors.length,
       },
-      errorSummary: result.errors.length > 0 ? { errors: result.errors } : null,
+      errorSummary: result.errors.length > 0 ? { errors: result.errors } : Prisma.JsonNull,
     },
   });
 }
