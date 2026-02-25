@@ -3,15 +3,5 @@
   "devCommand": "cd apps/web && npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "outputDirectory": "apps/web/.next",
-  "crons": [
-    {
-      "path": "/api/cron/fuel-sync",
-      "schedule": "*/15 * * * *"
-    },
-    {
-      "path": "/api/cron/alert-run",
-      "schedule": "0 * * * *"
-    }
-  ]
+  "outputDirectory": "apps/web/.next"
 }
